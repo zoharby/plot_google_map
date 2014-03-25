@@ -29,6 +29,8 @@ function varargout = plot_google_map(varargin)
 %                     for example).
 %    ShowLabels (1) - (0/1) Controls wheter to display city/street textual labels on the map
 %    Language       - (string) A 2 letter ISO 639-1 language code for displaying labels in a local language instead of English (where available).
+%                     For example, for Chinese use:
+%                     plot_google_map('language','zh')
 %                     For the list of codes, see:
 %                     http://en.wikipedia.org/wiki/List_of_ISO_639-1_codes
 %    Marker         - The marker argument is a text string with fields
@@ -78,10 +80,13 @@ function varargout = plot_google_map(varargin)
 %
 %  Author:
 %  Zohar Bar-Yehuda
+% Version 1.4 - 25/03/2014
+%       - Added the language parameter for showing labels in a local language
+%       - Display the URL on error to allow easier debugging of API errors
 % Version 1.3 - 06/10/2013
 %       - Improved functionality of AutoAxis, which now handles any shape of map axes. 
 %         Now also updates the extent of the map if the figure is resized.
-%       - Added the ShowLabels param which allows hiding the textual labels on the map.
+%       - Added the showLabels parameter which allows hiding the textual labels on the map.
 % Version 1.2 - 16/06/2012
 %       - Support use of the "scale=2" parameter by default for finer rendering (set scale=1 if too slow).
 %       - Auto-adjust axis extent so the map isn't stretched.
