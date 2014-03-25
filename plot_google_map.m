@@ -78,8 +78,9 @@ function varargout = plot_google_map(varargin)
 %
 %  Acknowledgement to Val Schmidt for his submission of get_google_map.m
 %
-%  Author:
+% Author:
 %  Zohar Bar-Yehuda
+%
 % Version 1.4 - 25/03/2014
 %       - Added the language parameter for showing labels in a local language
 %       - Display the URL on error to allow easier debugging of API errors
@@ -91,7 +92,7 @@ function varargout = plot_google_map(varargin)
 %       - Support use of the "scale=2" parameter by default for finer rendering (set scale=1 if too slow).
 %       - Auto-adjust axis extent so the map isn't stretched.
 %       - Set and use an API key which enables a much higher usage volume per day.
-%  Version 1.1 - 25/08/2011
+% Version 1.1 - 25/08/2011
 
 % store parameters in global variable (used for auto-refresh)
 global inputParams
