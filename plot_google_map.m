@@ -569,5 +569,3 @@ for idx = 1:length(axes_objs)
         plot_google_map(params{:});
     end
 end
-
-    
