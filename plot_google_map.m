@@ -346,8 +346,9 @@ sensor = '&sensor=false';
 url = [preamble location zoomStr sizeStr maptypeStr format markers labelsStr languageStr sensor keyStr];
 
 % Get the image
+filepath = fullfile(tempdir, filename);
 try
-    urlwrite(url,filename);
+    urlwrite(url,filepath);
 catch % error downloading map
     warning(sprintf(['Unable to download map form Google Servers.\n' ...
         'Possible reasons: no network connection, quota exceeded, or some other error.\n' ...
@@ -358,9 +359,9 @@ catch % error downloading map
     varargout{3} = [];
     return
 end
-[M Mcolor] = imread(filename);
+[M Mcolor] = imread(filepath);
 M = cast(M,'double');
-delete(filename); % delete temp file
+delete(filepath); % delete temp file
 width = size(M,2);
 height = size(M,1);
 
