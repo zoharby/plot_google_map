@@ -177,6 +177,10 @@ end
 
 % Store paramters in axis handle (for auto refresh callbacks)
 ud = get(axHandle, 'UserData');
+if isempty(ud)
+    % explicitly set as struct to avoid warnings
+    ud = struct;
+end
 ud.gmap_params = varargin;
 set(axHandle, 'UserData', ud);
 
