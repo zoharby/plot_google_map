@@ -103,7 +103,7 @@ function varargout = plot_google_map(varargin)
 %       - Set and use an API key which enables a much higher usage volume per day.
 % Version 1.1 - 25/08/2011
 
-persistent apiKey
+persistent apiKey useTemp
 if isnumeric(apiKey)
     % first run, check if API key file exists
     if exist('api_key.mat','file')
@@ -112,6 +112,26 @@ if isnumeric(apiKey)
         apiKey = '';
     end
 end
+
+if isempty(useTemp)
+    % first run, check we we have wrtie access to the temp folder
+    try 
+        tempfilename = tempname;
+        fid = fopen(tempfilename, 'w');
+        if fid > 0
+            fclose(fid);
+            useTemp = true;
+            delete(tempfilename);
+        else
+            % Don't have write access to temp folder or it doesn't exist, fallback to current dir
+            useTemp = false;
+        end
+    catch
+        % in case tempname fails for some reason
+        useTemp = false;
+    end
+end
+
 hold on
 
 % Default parametrs
@@ -350,14 +370,20 @@ sensor = '&sensor=false';
 url = [preamble location zoomStr sizeStr maptypeStr format markers labelsStr languageStr sensor keyStr];
 
 % Get the image
-filepath = fullfile(tempdir, filename);
+if useTemp
+    filepath = fullfile(tempdir, filename);
+else
+    filepath = filename;
+end
+
 try
     urlwrite(url,filepath);
 catch % error downloading map
-    warning(sprintf(['Unable to download map form Google Servers.\n' ...
-        'Possible reasons: no network connection, quota exceeded, or some other error.\n' ...
+    warning(['Unable to download map form Google Servers.\n' ...
+        'Matlab error was: %s\n\n' ...
+        'Possible reasons: missing write permissions, no network connection, quota exceeded, or some other error.\n' ...
         'Consider using an API key if quota problems persist.\n\n' ...
-        'To debug, try pasting the following URL in your browser, which may result in a more informative error:\n%s'], url));
+        'To debug, try pasting the following URL in your browser, which may result in a more informative error:\n%s'], lasterr, url);
     varargout{1} = [];
     varargout{2} = [];
     varargout{3} = [];
