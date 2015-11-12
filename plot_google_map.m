@@ -86,6 +86,8 @@ function varargout = plot_google_map(varargin)
 % Author:
 %  Zohar Bar-Yehuda
 %
+% Version 1.6 - 12/11/2015
+%       - Use system temp folder for writing image files (with fallback to current dir if missing write permissions)
 % Version 1.5 - 20/11/2014
 %       - Support for MATLAB R2014b
 %       - several fixes complex layouts: several maps in one figure, 
