@@ -445,7 +445,9 @@ uniImag =  myTurboInterp2(lonMesh,latMesh,imag,uniLonMesh,uniLatMesh);
 if nargout <= 1 % plot map
     % display image
     hold(axHandle, 'on');
+    cax = caxis;
     h = image(lonVect,latVect,uniImag, 'Parent', axHandle);
+    caxis(cax); % Preserve caxis that is sometimes changed by the call to image()
     set(axHandle,'YDir','Normal')
     set(h,'tag','gmap')
     set(h,'AlphaData',alphaData)
