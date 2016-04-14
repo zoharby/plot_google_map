@@ -11,7 +11,7 @@ function varargout = plot_google_map(varargin)
 % Returns the map without plotting it
 %
 % PROPERTIES:
-%    Axis           - Axis handle. If not given, gca is used. (LP)
+%    Axis           - Axis handle. If not given, gca is used.
 %    Height (640)   - Height of the image in pixels (max 640)
 %    Width  (640)   - Width of the image in pixels (max 640)
 %    Scale (2)      - (1/2) Resolution scale factor. Using Scale=2 will
@@ -28,6 +28,9 @@ function varargout = plot_google_map(varargin)
 %                     readability if many colors are plotted 
 %                     (using SCATTER for example).
 %    ShowLabels (1) - (0/1) Controls whether to display city/street textual labels on the map
+%    Style          - (string) A style configuration string. See:
+%                     https://developers.google.com/maps/documentation/static-maps/?csw=1#StyledMaps
+%                     http://instrument.github.io/styled-maps-wizard/
 %    Language       - (string) A 2 letter ISO 639-1 language code for displaying labels in a 
 %                     local language instead of English (where available).
 %                     For example, for Chinese use:
@@ -86,11 +89,12 @@ function varargout = plot_google_map(varargin)
 % Author:
 %  Zohar Bar-Yehuda
 %
+% Version 1.7 - 14/04/2016
 % Version 1.6 - 12/11/2015
 %       - Use system temp folder for writing image files (with fallback to current dir if missing write permissions)
 % Version 1.5 - 20/11/2014
 %       - Support for MATLAB R2014b
-%       - several fixes complex layouts: several maps in one figure, 
+%       - several fixes for complex layouts: several maps in one figure, 
 %         map inside a panel, specifying axis handle as input (thanks to Luke Plausin)
 % Version 1.4 - 25/03/2014
 %       - Added the language parameter for showing labels in a local language
@@ -150,6 +154,7 @@ showLabels = 1;
 language = '';
 markeridx = 1;
 markerlist = {};
+style = '';
 
 % Handle input arguments
 if nargin >= 2
@@ -185,6 +190,8 @@ if nargin >= 2
                 pth = fileparts(funcFile);
                 keyFile = fullfile(pth,'api_key.mat');
                 save(keyFile,'apiKey')
+            case 'style'
+                style = varargin{idx+1};
             otherwise
                 error(['Unrecognized variable: ' varargin{idx}])
         end
@@ -348,11 +355,14 @@ for idx = 1:length(markerlist)
         markers = [markers markerlist{idx}];
     end
 end
+
 if showLabels == 0
-    labelsStr = '&style=feature:all|element:labels|visibility:off';
-else
-    labelsStr = '';
+    if ~isempty(style)
+        style(end+1) = '|';
+    end
+    style = [style 'feature:all|element:labels|visibility:off'];
 end
+
 if ~isempty(language)
     languageStr = ['&language=' language];
 else
@@ -369,7 +379,14 @@ else
     convertNeeded = 1;
 end
 sensor = '&sensor=false';
-url = [preamble location zoomStr sizeStr maptypeStr format markers labelsStr languageStr sensor keyStr];
+
+if ~isempty(style)
+    styleStr = ['&style=' style];
+else
+    styleStr = '';
+end
+
+url = [preamble location zoomStr sizeStr maptypeStr format markers languageStr sensor keyStr styleStr];
 
 % Get the image
 if useTemp
