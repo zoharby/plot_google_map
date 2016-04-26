@@ -90,6 +90,7 @@ function varargout = plot_google_map(varargin)
 %  Zohar Bar-Yehuda
 %
 % Version 1.7 - 14/04/2016
+%       - Add custom style support
 % Version 1.6 - 12/11/2015
 %       - Use system temp folder for writing image files (with fallback to current dir if missing write permissions)
 % Version 1.5 - 20/11/2014
