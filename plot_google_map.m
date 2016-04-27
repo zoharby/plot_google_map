@@ -18,6 +18,10 @@ function varargout = plot_google_map(varargin)
 %                     double the resulotion of the downloaded image (up
 %                     to 1280x1280) and will result in finer rendering,
 %                     but processing time will be longer.
+%    Resize (1)     - (recommended 1-2) Resolution upsampling factor. 
+%                     Increases image resolution using imresize(). This results
+%                     in a finer image but it needs the image processing
+%                     toolbox and processing time will be longer.
 %    MapType        - ('roadmap') Type of map to return. Any of [roadmap, 
 %                     satellite, terrain, hybrid]. See the Google Maps API for
 %                     more information. 
@@ -89,6 +93,9 @@ function varargout = plot_google_map(varargin)
 % Author:
 %  Zohar Bar-Yehuda
 %
+% Version 1.8 - 25/04/2016 - By Hannes Diethelm
+%       - Add resize parameter to resize image using imresize()
+%       - Fix scale parameter
 % Version 1.7 - 14/04/2016
 %       - Add custom style support
 % Version 1.6 - 12/11/2015
@@ -146,6 +153,7 @@ axHandle = gca;
 height = 640;
 width = 640;
 scale = 2;
+resize = 1;
 maptype = 'roadmap';
 alphaData = 1;
 autoRefresh = 1;
@@ -167,6 +175,13 @@ if nargin >= 2
                 height = varargin{idx+1};
             case 'width'
                 width = varargin{idx+1};
+            case 'scale'
+                scale = round(varargin{idx+1});
+                if scale < 1 || scale > 2
+                    error('Scale must be 1 or 2');
+                end
+            case 'resize'
+                resize = varargin{idx+1};
             case 'maptype'
                 maptype = varargin{idx+1};
             case 'alpha'
@@ -415,18 +430,6 @@ delete(filepath); % delete temp file
 width = size(M,2);
 height = size(M,1);
 
-% Calculate a meshgrid of pixel coordinates in EPSG:900913
-centerPixelY = round(height/2);
-centerPixelX = round(width/2);
-[centerX,centerY] = latLonToMeters(lat, lon ); % center coordinates in EPSG:900913
-curResolution = initialResolution / 2^zoomlevel/scale; % meters/pixel (EPSG:900913)
-xVec = centerX + ((1:width)-centerPixelX) * curResolution; % x vector
-yVec = centerY + ((height:-1:1)-centerPixelY) * curResolution; % y vector
-[xMesh,yMesh] = meshgrid(xVec,yVec); % construct meshgrid 
-
-% convert meshgrid to WGS1984
-[lonMesh,latMesh] = metersToLatLon(xMesh,yMesh);
-
 % We now want to convert the image from a colormap image with an uneven
 % mesh grid, into an RGB truecolor image with a uniform grid.
 % This would enable displaying it with IMAGE, instead of PCOLOR.
@@ -443,11 +446,28 @@ if convertNeeded
 else
     imag = M/255;
 end
+% Resize if needed
+if resize ~= 1
+    imag = imresize(imag, resize, 'bilinear');
+end
+
+% Calculate a meshgrid of pixel coordinates in EPSG:900913
+width = size(imag,2);
+height = size(imag,1);
+centerPixelY = round(height/2);
+centerPixelX = round(width/2);
+[centerX,centerY] = latLonToMeters(lat, lon ); % center coordinates in EPSG:900913
+curResolution = initialResolution / 2^zoomlevel / scale / resize; % meters/pixel (EPSG:900913)
+xVec = centerX + ((1:width)-centerPixelX) * curResolution; % x vector
+yVec = centerY + ((height:-1:1)-centerPixelY) * curResolution; % y vector
+[xMesh,yMesh] = meshgrid(xVec,yVec); % construct meshgrid 
+
+% convert meshgrid to WGS1984
+[lonMesh,latMesh] = metersToLatLon(xMesh,yMesh);
 
 % Next, project the data into a uniform WGS1984 grid
-sizeFactor = 1; % factoring of new image
-uniHeight = round(height*sizeFactor);
-uniWidth = round(width*sizeFactor);
+uniHeight = round(height*resize);
+uniWidth = round(width*resize);
 latVect = linspace(latMesh(1,1),latMesh(end,1),uniHeight);
 lonVect = linspace(lonMesh(1,1),lonMesh(1,end),uniWidth);
 [uniLonMesh,uniLatMesh] = meshgrid(lonVect,latVect);
