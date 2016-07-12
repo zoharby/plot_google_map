@@ -230,6 +230,10 @@ ud.gmap_params = varargin;
 set(axHandle, 'UserData', ud);
 
 curAxis = axis(axHandle);
+if max(abs(curAxis)) > 500    
+    return;
+end    
+
 % Enforce Latitude constraints of EPSG:900913 
 if curAxis(3) < -85
     curAxis(3) = -85;
