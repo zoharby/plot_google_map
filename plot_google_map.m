@@ -128,7 +128,7 @@ if isnumeric(apiKey)
 end
 
 if isempty(useTemp)
-    % first run, check we we have wrtie access to the temp folder
+    % first run, check if we have wrtie access to the temp folder
     try 
         tempfilename = tempname;
         fid = fopen(tempfilename, 'w');
@@ -481,11 +481,7 @@ lonVect = linspace(lonMesh(1,1),lonMesh(1,end),uniWidth);
 [uniLonMesh,uniLatMesh] = meshgrid(lonVect,latVect);
 uniImag = zeros(uniHeight,uniWidth,3);
 
-% old version (projection using INTERP2)
-% for idx = 1:3
-%      % 'nearest' method is the fastest. difference from other methods is neglible
-%          uniImag(:,:,idx) =  interp2(lonMesh,latMesh,imag(:,:,idx),uniLonMesh,uniLatMesh,'nearest');
-% end
+% Fast Interpolation to uniform grid
 uniImag =  myTurboInterp2(lonMesh,latMesh,imag,uniLonMesh,uniLatMesh);
 
 if nargout <= 1 % plot map
@@ -501,13 +497,6 @@ if nargout <= 1 % plot map
     % add a dummy image to allow pan/zoom out to x2 of the image extent
     h_tmp = image(lonVect([1 end]),latVect([1 end]),zeros(2),'Visible','off', 'Parent', axHandle);
     set(h_tmp,'tag','gmap')
-    
-    % older version (display without conversion to uniform grid)
-    % h =pcolor(lonMesh,latMesh,(M));
-    % colormap(Mcolor)
-    % caxis([0 255])
-    % warning off % to avoid strange rendering warnings
-    % shading flat
    
     uistack(h,'bottom') % move map to bottom (so it doesn't hide previously drawn annotations)
     axis(axHandle, curAxis) % restore original zoom
