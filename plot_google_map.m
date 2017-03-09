@@ -230,7 +230,8 @@ ud.gmap_params = varargin;
 set(axHandle, 'UserData', ud);
 
 curAxis = axis(axHandle);
-if max(abs(curAxis)) > 500    
+if max(abs(curAxis)) > 500 || curAxis(3) > 90 || curAxis(4) < -90
+    warning('Axis limits are not reasonable for WGS1984, ignoring. Please make sure your plotted data in WGS1984 coordinates,')
     return;
 end    
 
@@ -428,8 +429,10 @@ catch % error downloading map
     varargout{3} = [];
     return
 end
-[M Mcolor] = imread(filepath);
-M = cast(M,'double');
+
+[M, Mcolor] = imread(filepath);
+Mcolor = uint8(Mcolor * 255);
+%M = cast(M,'double');
 delete(filepath); % delete temp file
 width = size(M,2);
 height = size(M,1);
@@ -443,12 +446,13 @@ height = size(M,1);
 
 % Convert image from colormap type to RGB truecolor (if PNG is used)
 if convertNeeded
-    imag = zeros(height,width,3);
+    imag = zeros(height,width,3, 'uint8');
     for idx = 1:3
-        imag(:,:,idx) = reshape(Mcolor(M(:)+1+(idx-1)*size(Mcolor,1)),height,width);
+        cur_map = Mcolor(:,idx);
+        imag(:,:,idx) = reshape(cur_map(M+1),height,width);
     end
 else
-    imag = M/255;
+    imag = M;
 end
 % Resize if needed
 if resize ~= 1
