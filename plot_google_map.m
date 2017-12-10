@@ -379,7 +379,7 @@ end
 
 if showLabels == 0
     if ~isempty(style)
-        style(end+1) = '|';
+        style = [style '&style='];
     end
     style = [style 'feature:all|element:labels|visibility:off'];
 end
