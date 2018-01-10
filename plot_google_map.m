@@ -150,6 +150,7 @@ hold on
 
 % Default parametrs
 axHandle = gca;
+set(axHandle, 'Layer','top'); % Put axis on top of image, so it doesn't hide the axis lines and ticks
 height = 640;
 width = 640;
 scale = 2;
