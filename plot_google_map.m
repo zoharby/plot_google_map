@@ -333,8 +333,10 @@ if nargout <= 1 % only if in plotting mode
             bd_callback = get(map_objs(idx),'ButtonDownFcn');
         end
     end
-    delete(map_objs)
-    
+    ud = get(axHandle, 'UserData');
+    delete(map_objs);
+    % Recover userdata of axis (cleared in cleanup function)
+    set(axHandle, 'UserData', ud);
 end
 
 % Calculate zoom level for current axis limits
@@ -504,6 +506,7 @@ if nargout <= 1 % plot map
     if nargout == 1
         varargout{1} = h;
     end
+    set(h, 'UserData', onCleanup(@() cleanupFunc(axHandle)));
     
     % if auto-refresh mode - override zoom callback to allow autumatic 
     % refresh of map upon zoom actions.
@@ -639,3 +642,11 @@ for idx = 1:length(axes_objs)
         plot_google_map(params{:});
     end
 end
+
+function cleanupFunc(h)
+ud = get(h, 'UserData');
+if isstruct(ud) && isfield(ud, 'gmap_params')
+    ud = rmfield(ud, 'gmap_params');
+    set(h, 'UserData', ud);
+end
+
