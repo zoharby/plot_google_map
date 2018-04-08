@@ -56,6 +56,14 @@ function varargout = plot_google_map(varargin)
 %                     of the plot to avoid the map being stretched.
 %                     This will adjust the span to be correct
 %                     according to the shape of the map axes.
+%    MapScale (0)  - (0/1) defines wheteher to add a scale indicator to
+%                     the map.
+%    ScaleWidth (0.25) - (0.1-0.9) defines the max width of the scale
+%                     indicator relative to the map width.
+%    ScaleLocation (sw) - (ne, n, se, s, sw, nw) defines the location of
+%                     scale indicator on the map.
+%    ScaleUnits (si) - (si/imp) changes the scale indicator units between 
+%                     SI and imperial units.
 %    FigureResizeUpdate (1) - (0/1) defines whether to automatically refresh the
 %                     map upon resizing the figure. This will ensure map
 %                     isn't stretched after figure resize.
@@ -79,20 +87,25 @@ function varargout = plot_google_map(varargin)
 % EXAMPLE - plot a map showing some capitals in Europe:
 %    lat = [48.8708   51.5188   41.9260   40.4312   52.523   37.982];
 %    lon = [2.4131    -0.1300    12.4951   -3.6788    13.415   23.715];
-%    plot(lon,lat,'.r','MarkerSize',20)
-%    plot_google_map
+%    plot(lon, lat, '.r', 'MarkerSize', 20)
+%    plot_google_map('MapScale', 1)
 %
 % References:
 %  http://www.mathworks.com/matlabcentral/fileexchange/24113
 %  http://www.maptiler.org/google-maps-coordinates-tile-bounds-projection/
 %  http://developers.google.com/maps/documentation/staticmaps/
+%  https://www.mathworks.com/matlabcentral/fileexchange/33545-automatic-map-scale-generation
 %
 % Acknowledgements:
-%  Val Schmidt for his submission of get_google_map.m
+%  Val Schmidt for the submission of get_google_map.m
+%  Jonathan Sullivan for the submission of makescale.m
 %
 % Author:
 %  Zohar Bar-Yehuda
 %
+% Version 2.0 - 08/04/2018
+%       - Add an option to show a map scale
+%       - Several bugfixes
 % Version 1.8 - 25/04/2016 - By Hannes Diethelm
 %       - Add resize parameter to resize image using imresize()
 %       - Fix scale parameter
@@ -165,6 +178,10 @@ language = '';
 markeridx = 1;
 markerlist = {};
 style = '';
+mapScale = 0;
+scaleWidth = 0.25;
+scaleLocation = 'se';
+scaleUnits = 'si';
 
 % Handle input arguments
 if nargin >= 2
@@ -209,6 +226,14 @@ if nargin >= 2
                 save(keyFile,'apiKey')
             case 'style'
                 style = varargin{idx+1};
+            case 'mapscale'
+                mapScale = varargin{idx+1};
+            case 'scalewidth'
+                scaleWidth = varargin{idx+1};
+            case 'scalelocation'
+                scaleLocation = varargin{idx+1};
+            case 'scaleunits'
+                scaleUnits = varargin{idx+1};
             otherwise
                 error(['Unrecognized variable: ' varargin{idx}])
         end
@@ -335,6 +360,7 @@ if nargout <= 1 % only if in plotting mode
     end
     ud = get(axHandle, 'UserData');
     delete(map_objs);
+    delete(findobj(curChildren,'tag','MapScale'));
     % Recover userdata of axis (cleared in cleanup function)
     set(axHandle, 'UserData', ud);
 end
@@ -535,6 +561,11 @@ if nargout <= 1 % plot map
     
     % set callback properties 
     set(h,'ButtonDownFcn',bd_callback);
+    
+    if mapScale
+       makescale(axHandle, 'set_callbacks', 0, 'units', scaleUnits, ...
+                 'location', scaleLocation, 'width', scaleWidth);
+    end
 else % don't plot, only return map
     varargout{1} = lonVect;
     varargout{2} = latVect;
