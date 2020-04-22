@@ -18,24 +18,24 @@ function varargout = plot_google_map(varargin)
 %                     double the resulotion of the downloaded image (up
 %                     to 1280x1280) and will result in finer rendering,
 %                     but processing time will be longer.
-%    Resize (1)     - (recommended 1-2) Resolution upsampling factor. 
+%    Resize (1)     - (recommended 1-2) Resolution upsampling factor.
 %                     Increases image resolution using imresize(). This results
 %                     in a finer image but it needs the image processing
 %                     toolbox and processing time will be longer.
-%    MapType        - ('roadmap') Type of map to return. Any of [roadmap, 
+%    MapType        - ('roadmap') Type of map to return. Any of [roadmap,
 %                     satellite, terrain, hybrid]. See the Google Maps API for
-%                     more information. 
+%                     more information.
 %    Alpha (1)      - (0-1) Transparency level of the map (0 is fully
 %                     transparent). While the map is always moved to the
 %                     bottom of the plot (i.e. will not hide previously
 %                     drawn items), this can be useful in order to increase
-%                     readability if many colors are plotted 
+%                     readability if many colors are plotted
 %                     (using SCATTER for example).
 %    ShowLabels (1) - (0/1) Controls whether to display city/street textual labels on the map
 %    Style          - (string) A style configuration string. See:
 %                     https://developers.google.com/maps/documentation/static-maps/?csw=1#StyledMaps
 %                     http://instrument.github.io/styled-maps-wizard/
-%    Language       - (string) A 2 letter ISO 639-1 language code for displaying labels in a 
+%    Language       - (string) A 2 letter ISO 639-1 language code for displaying labels in a
 %                     local language instead of English (where available).
 %                     For example, for Chinese use:
 %                     plot_google_map('language','zh')
@@ -62,15 +62,15 @@ function varargout = plot_google_map(varargin)
 %                     indicator relative to the map width.
 %    ScaleLocation (sw) - (ne, n, se, s, sw, nw) defines the location of
 %                     scale indicator on the map.
-%    ScaleUnits (si) - (si/imp) changes the scale indicator units between 
+%    ScaleUnits (si) - (si/imp) changes the scale indicator units between
 %                     SI and imperial units.
 %    FigureResizeUpdate (1) - (0/1) defines whether to automatically refresh the
 %                     map upon resizing the figure. This will ensure map
 %                     isn't stretched after figure resize.
-%    APIKey         - (string) set your own API key which you obtained from Google: 
+%    APIKey         - (string) set your own API key which you obtained from Google:
 %                     http://developers.google.com/maps/documentation/staticmaps/#api_key
-%                     This will enable up to 25,000 map requests per day, 
-%                     compared to a few hundred requests without a key. 
+%                     This will enable up to 25,000 map requests per day,
+%                     compared to a few hundred requests without a key.
 %                     To set the key, use:
 %                     plot_google_map('APIKey','SomeLongStringObtaindFromGoogle')
 %                     You need to do this only once to set the key.
@@ -80,8 +80,8 @@ function varargout = plot_google_map(varargin)
 % OUTPUT:
 %    h              - Handle to the plotted map
 %
-%    lonVect        - Vector of Longidute coordinates (WGS84) of the image 
-%    latVect        - Vector of Latidute coordinates (WGS84) of the image 
+%    lonVect        - Vector of Longidute coordinates (WGS84) of the image
+%    latVect        - Vector of Latidute coordinates (WGS84) of the image
 %    imag           - Image matrix (height,width,3) of the map
 %
 % EXAMPLE - plot a map showing some capitals in Europe:
@@ -115,13 +115,13 @@ function varargout = plot_google_map(varargin)
 %       - Use system temp folder for writing image files (with fallback to current dir if missing write permissions)
 % Version 1.5 - 20/11/2014
 %       - Support for MATLAB R2014b
-%       - several fixes for complex layouts: several maps in one figure, 
+%       - several fixes for complex layouts: several maps in one figure,
 %         map inside a panel, specifying axis handle as input (thanks to Luke Plausin)
 % Version 1.4 - 25/03/2014
 %       - Added the language parameter for showing labels in a local language
 %       - Display the URL on error to allow easier debugging of API errors
 % Version 1.3 - 06/10/2013
-%       - Improved functionality of AutoAxis, which now handles any shape of map axes. 
+%       - Improved functionality of AutoAxis, which now handles any shape of map axes.
 %         Now also updates the extent of the map if the figure is resized.
 %       - Added the showLabels parameter which allows hiding the textual labels on the map.
 % Version 1.2 - 16/06/2012
@@ -130,7 +130,7 @@ function varargout = plot_google_map(varargin)
 %       - Set and use an API key which enables a much higher usage volume per day.
 % Version 1.1 - 25/08/2011
 
-persistent apiKey useTemp
+persistent apiKey useTemp cacheCalls
 if isnumeric(apiKey)
     % first run, check if API key file exists
     if exist('api_key.mat','file')
@@ -142,7 +142,7 @@ end
 
 if isempty(useTemp)
     % first run, check if we have wrtie access to the temp folder
-    try 
+    try
         tempfilename = tempname;
         fid = fopen(tempfilename, 'w');
         if fid > 0
@@ -157,6 +157,10 @@ if isempty(useTemp)
         % in case tempname fails for some reason
         useTemp = false;
     end
+end
+
+if isempty(cacheCalls)
+    cacheCalls = 0;
 end
 
 hold on
@@ -182,6 +186,7 @@ mapScale = 0;
 scaleWidth = 0.25;
 scaleLocation = 'se';
 scaleUnits = 'si';
+cacheDir = 'googlemaps';
 
 % Handle input arguments
 if nargin >= 2
@@ -259,9 +264,9 @@ curAxis = axis(axHandle);
 if max(abs(curAxis)) > 500 || curAxis(3) > 90 || curAxis(4) < -90
     warning('Axis limits are not reasonable for WGS1984, ignoring. Please make sure your plotted data in WGS1984 coordinates,')
     return;
-end    
+end
 
-% Enforce Latitude constraints of EPSG:900913 
+% Enforce Latitude constraints of EPSG:900913
 if curAxis(3) < -85
     curAxis(3) = -85;
 end
@@ -293,21 +298,21 @@ if autoAxis
     % adjust current axis limit to avoid strectched maps
     [xExtent,yExtent] = latLonToMeters(curAxis(3:4), curAxis(1:2) );
     xExtent = diff(xExtent); % just the size of the span
-    yExtent = diff(yExtent); 
+    yExtent = diff(yExtent);
     % get axes aspect ratio
     drawnow
     org_units = get(axHandle,'Units');
     set(axHandle,'Units','Pixels')
-    ax_position = get(axHandle,'position');        
+    ax_position = get(axHandle,'position');
     set(axHandle,'Units',org_units)
     aspect_ratio = ax_position(4) / ax_position(3);
-    
-    if xExtent*aspect_ratio > yExtent        
+
+    if xExtent*aspect_ratio > yExtent
         centerX = mean(curAxis(1:2));
         centerY = mean(curAxis(3:4));
         spanX = (curAxis(2)-curAxis(1))/2;
         spanY = (curAxis(4)-curAxis(3))/2;
-       
+
         % enlarge the Y extent
         spanY = spanY*xExtent*aspect_ratio/yExtent; % new span
         if spanY > 85
@@ -319,7 +324,7 @@ if autoAxis
         curAxis(3) = centerY-spanY;
         curAxis(4) = centerY+spanY;
     elseif yExtent > xExtent*aspect_ratio
-        
+
         centerX = mean(curAxis(1:2));
         centerY = mean(curAxis(3:4));
         spanX = (curAxis(2)-curAxis(1))/2;
@@ -330,12 +335,12 @@ if autoAxis
             spanY = spanY * 180 / spanX;
             spanX = spanX * 180 / spanX;
         end
-        
+
         curAxis(1) = centerX-spanX;
         curAxis(2) = centerX+spanX;
         curAxis(3) = centerY-spanY;
         curAxis(4) = centerY+spanY;
-    end            
+    end
     % Enforce Latitude constraints of EPSG:900913
     if curAxis(3) < -85
         curAxis(3:4) = curAxis(3:4) + (-85 - curAxis(3));
@@ -375,10 +380,10 @@ initialResolution = 2 * pi * 6378137 / tileSize; % 156543.03392804062 for tileSi
 zoomlevel = floor(log2(initialResolution/minRes));
 
 % Enforce valid zoom levels
-if zoomlevel < 0 
+if zoomlevel < 0
     zoomlevel = 0;
 end
-if zoomlevel > 19 
+if zoomlevel > 19
     zoomlevel = 19;
 end
 
@@ -418,7 +423,7 @@ if ~isempty(language)
 else
     languageStr = '';
 end
-    
+
 if ismember(maptype,{'satellite','hybrid'})
     filename = 'tmp.jpg';
     format = '&format=jpg';
@@ -445,24 +450,95 @@ else
     filepath = filename;
 end
 
-try
-    urlwrite(url,filepath);
-catch % error downloading map
-    warning(['Unable to download map form Google Servers.\n' ...
-        'Matlab error was: %s\n\n' ...
-        'Possible reasons: missing write permissions, no network connection, quota exceeded, or some other error.\n' ...
-        'Consider using an API key if quota problems persist.\n\n' ...
-        'To debug, try pasting the following URL in your browser, which may result in a more informative error:\n%s'], lasterr, url);
-    varargout{1} = [];
-    varargout{2} = [];
-    varargout{3} = [];
-    return
+% Check cache or cache image
+cacheId = [location zoomStr sizeStr maptypeStr format styleStr];
+[fpath,~,fext] = fileparts(filepath);
+cacheRows = 0;
+if exist(fullfile(fpath,cacheDir,'google_map_cache.mat'),'file') == 2
+    load(fullfile(fpath,cacheDir,'google_map_cache.mat'),'cacheLUT');
+    cacheRows = size(cacheLUT,1);
+    % check if we already downloaded the image
+    cacheMask = ismember(cacheLUT.id,cacheId);
+    if any(cacheMask)
+        % image should exist, check if file exists
+        filepath = fullfile(fpath,cacheDir,cacheLUT.fname{cacheMask});
+        if exist(filepath,'file') == 2
+            useCache = true;
+            cacheCalls = cacheCalls+1;
+            if mod(cacheCalls,10)==0
+                fprintf('Use Google Maps cache saved %d web calls so far\n',cacheCalls);
+            end
+        else
+            cacheLUT(cacheMask,:) = [];
+            useCache = false;
+        end
+    else
+        % no image exists, download it
+        [~,fnametmp,~] = fileparts(tempname);
+        filepath = fullfile(fpath,cacheDir,strcat(fnametmp,fext));
+        useCache = false;
+        % do some housekeeping, remove old files and clean up cacheLUT
+        try
+            dtoday = floor(posixtime(datetime('now'))/86400)*86400;
+            maskdel = cacheLUT.ts<(dtoday-86400*7);
+            if all(maskdel)
+                % full cache is outdated, delete all
+                delete([fpath filesep cacheDir filesep '*']);
+            elseif any(maskdel)
+                delfiles = fullfile(fpath,cacheDir,cacheLUT.fname(maskdel));
+                delete(delfiles{:});
+                cacheLUT(maskdel,:) = [];
+            end
+        catch
+            warning('Error while cleaning map cache directory.\nMatlab error was: %s\n\n', lasterr);
+        end
+    end
+else
+    % initialize LUT
+    useCache = false;
+    [~,fnametmp,~] = fileparts(tempname);
+    maptempdir = [fpath filesep cacheDir];
+    if ~(exist(maptempdir,'dir')==7)
+        status = mkdir(maptempdir);
+        if status==0
+            warning('Error, could not create directory %s\n',maptempdir);
+        end
+    end
+    filepath = fullfile(fpath,cacheDir,strcat(fnametmp,fext));
+end
+
+if ~useCache
+    try
+        %urlwrite(url,filepath);
+        websave(filepath,url);
+    catch % error downloading map
+        warning(['Unable to download map from Google Servers.\n' ...
+            'Matlab error was: %s\n\n' ...
+            'Possible reasons: missing write permissions, no network connection, quota exceeded, or some other error.\n' ...
+            'Consider using an API key if quota problems persist.\n\n' ...
+            'To debug, try pasting the following URL in your browser, which may result in a more informative error:\n%s'], lasterr, url);
+        varargout{1} = [];
+        varargout{2} = [];
+        varargout{3} = [];
+        return
+    end
+    ts = floor(posixtime(datetime('now')));
+    id = {cacheId};
+    fname = {strcat(fnametmp,fext)};
+    if exist('cacheLUT','var')
+        cacheLUT = [cacheLUT;table(ts,id,fname)];
+    else
+        cacheLUT = table(ts,id,fname);
+    end
+end
+if cacheRows~=size(cacheLUT,1)
+    save(fullfile(fpath,cacheDir,'google_map_cache.mat'),'cacheLUT');
 end
 
 [M, Mcolor] = imread(filepath);
 Mcolor = uint8(Mcolor * 255);
 %M = cast(M,'double');
-delete(filepath); % delete temp file
+%delete(filepath); % delete temp file
 width = size(M,2);
 height = size(M,1);
 
@@ -497,7 +573,7 @@ centerPixelX = round(width/2);
 curResolution = initialResolution / 2^zoomlevel / scale / resize; % meters/pixel (EPSG:900913)
 xVec = centerX + ((1:width)-centerPixelX) * curResolution; % x vector
 yVec = centerY + ((height:-1:1)-centerPixelY) * curResolution; % y vector
-[xMesh,yMesh] = meshgrid(xVec,yVec); % construct meshgrid 
+[xMesh,yMesh] = meshgrid(xVec,yVec); % construct meshgrid
 
 % convert meshgrid to WGS1984
 [lonMesh,latMesh] = metersToLatLon(xMesh,yMesh);
@@ -522,46 +598,46 @@ if nargout <= 1 % plot map
     set(axHandle,'YDir','Normal')
     set(h,'tag','gmap')
     set(h,'AlphaData',alphaData)
-    
+
     % add a dummy image to allow pan/zoom out to x2 of the image extent
     h_tmp = image(lonVect([1 end]),latVect([1 end]),zeros(2),'Visible','off', 'Parent', axHandle, 'CDataMapping', 'scaled');
     set(h_tmp,'tag','gmap')
-   
+
     uistack(h,'bottom') % move map to bottom (so it doesn't hide previously drawn annotations)
     axis(axHandle, curAxis) % restore original zoom
     if nargout == 1
         varargout{1} = h;
     end
     set(h, 'UserData', onCleanup(@() cleanupFunc(axHandle)));
-    
-    % if auto-refresh mode - override zoom callback to allow autumatic 
+
+    % if auto-refresh mode - override zoom callback to allow autumatic
     % refresh of map upon zoom actions.
     figHandle = axHandle;
     while ~strcmpi(get(figHandle, 'Type'), 'figure')
         % Recursively search for parent figure in case axes are in a panel
         figHandle = get(figHandle, 'Parent');
     end
-    
-    zoomHandle = zoom(axHandle);   
-    panHandle = pan(figHandle); % This isn't ideal, doesn't work for contained axis    
-    if autoRefresh        
-        set(zoomHandle,'ActionPostCallback',@update_google_map);          
-        set(panHandle, 'ActionPostCallback', @update_google_map);        
+
+    zoomHandle = zoom(axHandle);
+    panHandle = pan(figHandle); % This isn't ideal, doesn't work for contained axis
+    if autoRefresh
+        set(zoomHandle,'ActionPostCallback',@update_google_map);
+        set(panHandle, 'ActionPostCallback', @update_google_map);
     else % disable zoom override
         set(zoomHandle,'ActionPostCallback',[]);
         set(panHandle, 'ActionPostCallback',[]);
     end
-    
+
     % set callback for figure resize function, to update extents if figure
     % is streched.
     if figureResizeUpdate &&isempty(get(figHandle, 'ResizeFcn'))
         % set only if not already set by someone else
-        set(figHandle, 'ResizeFcn', @update_google_map_fig);       
-    end    
-    
-    % set callback properties 
+        set(figHandle, 'ResizeFcn', @update_google_map_fig);
+    end
+
+    % set callback properties
     set(h,'ButtonDownFcn',bd_callback);
-    
+
     if mapScale
        makescale(axHandle, 'set_callbacks', 0, 'units', scaleUnits, ...
                  'location', scaleLocation, 'width', scaleWidth);
@@ -665,7 +741,7 @@ for idx = 1:length(axes_objs)
         else
             params = {};
         end
-        
+
         % Add axes to inputs if needed
         if ~sum(strcmpi(params, 'Axis'))
             params = [params, {'Axis', axes_objs(idx)}];
